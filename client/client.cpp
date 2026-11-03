@@ -29,6 +29,10 @@ int main(int argc, char *argv[]){
 
 }
 
+void print_usage(char *programm_name){
+        fprintf(stderr,"Usage: %s <ip> <port> \n\n", programm_name);
+    }
+
 int connect_to_server(const char* ip, int port){
     int socket_fd = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -57,7 +61,80 @@ int connect_to_server(const char* ip, int port){
 }
 
 
+void send_message(int socket_fd){
+    std::string sender;
+    std::string receiver;
+    std::string subject;
+    std::string message;
 
-void print_usage(char *programm_name){
-        fprintf(stderr,"Usage: %s <ip> <port> \n\n", programm_name);
+    std::cout << "Sender: ";
+    std::getline(std::cin, sender);
+
+    std::cout << "Receiver: ";
+    std::getline(std::cin, receiver);
+
+    std::cout << "Subject: ";
+    std::getline(std::cin, subject);
+
+    std::cout << "Message (Finish with a dot<.>):" << std::endl;
+
+    std::string line;
+
+    while (std::getline(std::cin, line)){
+        if(line == "."){
+            break;
+        }
+
+        message += line + "\n";
     }
+
+    std::string request = "SEND\n"
+                    + sender + "\n"
+                    + receiver + "\n"
+                    + subject + "\n"
+                    + message
+                    + ".\n";
+    
+     if(!send_all(socket_fd, request)){
+        std::cerr << "Failed to send message." << std::endl;
+        return;
+    }
+
+    std::cout << "Message request sent to server." << std::endl;
+}
+
+
+bool send_all(int socket_fd, const std::string& data) //This method helps my send_message method. It assures that every Byte is properly sent.
+{
+    size_t total_sent = 0;
+
+    while(total_sent < data.size()){
+        ssize_t bytes_sent = send(
+            socket_fd,
+            data.c_str() + total_sent,
+            data.size() - total_sent,
+            0
+        );
+
+        if(bytes_sent == -1){
+            if(errno == EINTR){
+                continue;
+            }
+
+            perror("Sending failed");
+            return false;
+        }
+
+        if(bytes_sent == 0){
+            std::cerr << "Sending failed: No bytes sent." << std::endl;
+            return false;
+        }
+
+        total_sent += bytes_sent;
+    }
+
+    return true;
+}
+
+
+
