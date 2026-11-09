@@ -1,3 +1,4 @@
+#include <charconv>
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
@@ -5,6 +6,7 @@
 #include <exception>
 #include <filesystem>
 #include <iostream>
+#include <iterator>
 #include <ostream>
 #include <string>
 #include <netinet/in.h>
@@ -125,15 +127,41 @@ void createFile(std::string& subject,std::string& sender,std::string& receiver, 
 std::vector<std::filesystem::path> list_messages(const std::string& username){
     std::vector<std::filesystem::path> files;
     std::filesystem::path userDir = std::filesystem::path(spoolDir) / username;
+
     if(!std::filesystem::exists(userDir)){
         return {};
     }
-    for (const auto& entry : std::filesystem::directory_iterator()) {
+
+    for (const auto& entry : std::filesystem::directory_iterator(userDir)) {
         files.push_back(entry);
     }
     return files;
 }
 
+std::string read_message(const std::string& username,const std::string& messageNumber){
+    std::filesystem::path userDir = std::filesystem::path(spoolDir) / username;
+    std::string filepath = userDir.string() +"/"+ messageNumber+".txt";
+    std::string response, line;
+
+    std::ifstream file(filepath);
+    if (!file.is_open()) {
+        std::cerr << "Failed to open file: " << filepath<<std::endl;
+        return "";
+    }
+
+    while (std::getline(file,line)) {
+        response.append(line).append("\n");
+    }
+    response.append("\n.\n");
+    return response;
+}
+
+int delete_message(const std::string& username,const std::string& messageNumber){
+    std::filesystem::path userDir = std::filesystem::path(spoolDir) / username;
+    std::string filepath = userDir.string() +"/"+ messageNumber+".txt";
+    
+    return std::remove(filepath.data());
+}
 
 int connection(int port){
     int serverSocket = socket(AF_INET, SOCK_STREAM, 0);
@@ -192,7 +220,6 @@ int connection(int port){
 
             std::vector<std::filesystem::path> files = list_messages(username);
             std::string response = std::to_string(files.size()) + "\n";
-
             for (const auto& file : files) {
                 std::ifstream mail(file);
                 std::string sender, receiver,subject;
@@ -203,6 +230,25 @@ int connection(int port){
             }
             send_all(clientSocket, response);
 
+        }else if(requestType == "READ"){
+            std::string username, messageNumber;
+            receive_line(clientSocket, buffer, username);
+            receive_line(clientSocket, buffer, messageNumber);
+
+            std::string content = read_message(username, messageNumber);
+            send_all(clientSocket, "OK\n" + content);
+
+        }else if(requestType == "DEL"){
+            std::string username, messageNumber;
+            receive_line(clientSocket, buffer, username);
+            receive_line(clientSocket, buffer, messageNumber);
+            
+            if(delete_message(username, messageNumber)==0){
+                send_all(clientSocket, "OK\n");
+            }else {
+                send_all(clientSocket, "ERR\n");
+            }
+            
         }else if (requestType == "QUIT") {
             break;
         }
