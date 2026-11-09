@@ -2,12 +2,14 @@
 #include <string>
 #include <iostream>
 #include <stdlib.h>
+#include <cerrno>
 
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <unistd.h>
 
 #include "client.h"
+
 
 int main(int argc, char *argv[]){
  if (argc != 3)
@@ -60,6 +62,37 @@ int connect_to_server(const char* ip, int port){
     return socket_fd;
 }
 
+bool send_all(int socket_fd, const std::string& data){ //This method helps my send_message method. It assures that every Byte is properly sent.
+
+    size_t total_sent = 0;
+
+    while(total_sent < data.size()){
+        ssize_t bytes_sent = send(
+            socket_fd,
+            data.c_str() + total_sent,
+            data.size() - total_sent,
+            MSG_NOSIGNAL
+        );
+
+        if(bytes_sent == -1){
+            if(errno == EINTR){
+                continue;
+            }
+
+            perror("Sending failed");
+            return false;
+        }
+
+        if(bytes_sent == 0){
+            std::cerr << "Sending failed: No bytes sent." << std::endl;
+            return false;
+        }
+
+        total_sent += bytes_sent;
+    }
+
+    return true;
+}
 
 void send_message(int socket_fd){
     std::string sender;
@@ -104,37 +137,7 @@ void send_message(int socket_fd){
 }
 
 
-bool send_all(int socket_fd, const std::string& data) //This method helps my send_message method. It assures that every Byte is properly sent.
-{
-    size_t total_sent = 0;
 
-    while(total_sent < data.size()){
-        ssize_t bytes_sent = send(
-            socket_fd,
-            data.c_str() + total_sent,
-            data.size() - total_sent,
-            0
-        );
-
-        if(bytes_sent == -1){
-            if(errno == EINTR){
-                continue;
-            }
-
-            perror("Sending failed");
-            return false;
-        }
-
-        if(bytes_sent == 0){
-            std::cerr << "Sending failed: No bytes sent." << std::endl;
-            return false;
-        }
-
-        total_sent += bytes_sent;
-    }
-
-    return true;
-}
 
 
 
