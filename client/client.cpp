@@ -3,6 +3,7 @@
 #include <iostream>
 #include <stdlib.h>
 #include <cerrno>
+#include <limits>
 
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -27,10 +28,61 @@ int main(int argc, char *argv[]){
     if(socket_fd == -1) return 1;
     std::cout << "Connected to server!" << std::endl;
 
-    send_message(socket_fd);
+    int choice = 0;
+
+    while(choice != 5){
+        std::cout << "\n--- TW-Mailer ---" << std::endl;
+        std::cout << "1. Send message" << std::endl;
+        std::cout << "2. List messages" << std::endl;
+        std::cout << "3. Read message" << std::endl;
+        std::cout << "4. Delete message" << std::endl;
+        std::cout << "5. Quit" << std::endl;
+
+        std::cout << "Choose an option: ";
+       
+        if(!(std::cin >> choice)){
+            if(std::cin.eof()){
+                break;
+            }
+
+            std::cin.clear();
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            std::cout << "Please enter a valid number!" << std::endl;
+            continue;
+        }
+
+std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+
+        switch(choice){
+            case 1:
+                send_message(socket_fd);
+                break;
+            
+            case 2:
+                list_messages(socket_fd);
+                break;
+
+            case 3:
+                read_message(socket_fd);
+                break;
+
+            case 4:
+                delete_message(socket_fd);
+                break;
+
+            case 5:
+                quit_connection(socket_fd);
+                break;
+
+            default:
+                std::cout << "Invalid option!" << std::endl;
+                break;
+
+        }
+    }
 
     close(socket_fd);
-
+    return 0;
 }
 
 void print_usage(char *programm_name){
@@ -178,6 +230,15 @@ void send_message(int socket_fd){
     else{
         std::cerr << "Unexpected or missing server response." << std::endl;
     }
+}
+
+void quit_connection(int socket_fd){
+    if(!send_all(socket_fd, "QUIT\n")){
+        std::cerr << "Failed to send QUIT command." << std::endl;
+        return;
+    }
+
+    std::cout << "Disconnected from server." << std::endl;
 }
 
 
