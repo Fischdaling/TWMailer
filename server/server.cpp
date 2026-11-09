@@ -194,7 +194,7 @@ int connection(int port){
             std::string response = std::to_string(files.size()) + "\n";
 
             for (const auto& file : files) {
-                std::ifstream mail;
+                std::ifstream mail(file);
                 std::string sender, receiver,subject;
                 std::getline(mail, sender);
                 std::getline(mail, receiver);
