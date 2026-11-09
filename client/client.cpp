@@ -304,3 +304,99 @@ void list_messages(int socket_fd){
         std::cout << i + 1 << ". " << subject << std::endl;
     }
 }
+
+void read_message(int socket_fd)
+{
+    std::string username;
+    std::string message_number;
+
+    std::cout << "Username: ";
+    std::getline(std::cin, username);
+
+    std::cout << "Message number: ";
+    std::getline(std::cin, message_number);
+
+    std::string request = "READ\n"
+                        + username + "\n"
+                        + message_number + "\n";
+
+    if(!send_all(socket_fd, request)){
+        std::cerr << "Failed to send READ request." << std::endl;
+        return;
+    }
+
+    std::string response;
+
+    if(!receive_line(socket_fd, response)){
+        std::cerr << "Failed to receive READ response." << std::endl;
+        return;
+    }
+
+    if(response == "ERR"){
+        std::cerr << "Message could not be read." << std::endl;
+        return;
+    }
+
+    if(response != "OK"){
+        std::cerr << "Unexpected server response." << std::endl;
+        return;
+    }
+
+    std::cout << "\n--- Message ---" << std::endl;
+
+    std::string line;
+
+    while(true){
+        if(!receive_line(socket_fd, line)){
+            std::cerr << "Failed to receive message content." << std::endl;
+            return;
+        }
+
+        if(line == "."){
+            break;
+        }
+
+        std::cout << line << std::endl;
+    }
+    
+    std::cout << "Message fully received!" << std::endl;
+}
+
+
+void delete_message(int socket_fd)
+{
+    std::string username;
+    std::string message_number;
+
+    std::cout << "Username: ";
+    std::getline(std::cin, username);
+
+    std::cout << "Message number: ";
+    std::getline(std::cin, message_number);
+
+    std::string request = "DEL\n"
+                        + username + "\n"
+                        + message_number + "\n";
+
+    if(!send_all(socket_fd, request)){
+        std::cerr << "Failed to send DEL request." << std::endl;
+        return;
+    }
+
+    std::string response;
+
+    if(!receive_line(socket_fd, response)){
+        std::cerr << "Failed to receive DEL response." << std::endl;
+        return;
+    }
+ 
+    if(response == "OK"){
+        std::cout << "Message successfully deleted!" << std::endl;
+    }
+    else if(response == "ERR"){
+        std::cerr << "Server could not delete the message." << std::endl;
+    }
+    else{
+        std::cerr << "Unexpected server response." << std::endl;
+    }
+}
