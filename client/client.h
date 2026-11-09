@@ -7,6 +7,7 @@ int connect_to_server(const char* ip, int port);
 // client-functions
 void send_message(int socket_fd);
 bool send_all(int socket_fd, const std::string& data);
+std::string receive_line(int socket_fd);
 void list_messages(int socket_fd);
 void read_message(int socket_fd);
 void delete_message(int socket_fd);

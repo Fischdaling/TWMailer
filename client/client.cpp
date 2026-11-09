@@ -96,6 +96,36 @@ bool send_all(int socket_fd, const std::string& data){ //This method helps my se
     return true;
 }
 
+std::string receive_line(int socket_fd){
+    std::string response;
+    char character;
+
+    while(true){
+        ssize_t bytes_received = recv(socket_fd, &character, 1, 0);
+        
+        if(bytes_received > 0){
+            if(character == '\n'){
+                return response;
+            }
+            response += character;
+        }
+        if(bytes_received == 0){
+            std::cerr << "Server closed the connection." << std::endl;
+            return "";
+        }
+
+        if(bytes_received == -1){
+            if(errno == EINTR){
+                continue;
+            }
+
+            perror("Receiving failed");
+            return "";
+        }
+    }
+}
+
+
 void send_message(int socket_fd){
     std::string sender;
     std::string receiver;
@@ -136,14 +166,23 @@ void send_message(int socket_fd){
     }
 
     std::cout << "Message request sent to server." << std::endl;
+
+    std::string response = receive_line(socket_fd);
+
+    if(response == "OK"){
+        std::cout << "Message successfully sent!" << std::endl;
+    }
+    else if(response == "ERR"){
+        std::cerr << "Server couldn't save the message and responded with ERR." << std::endl;
+    }
+    else{
+        std::cerr << "Unexpected or missing server response." << std::endl;
+    }
 }
 
-/*
-std::string receive_line(int socket_fd){
-    std::string response;
-    char character;
-}
-*/
+
+
+
 
 
 
