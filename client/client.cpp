@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <cerrno>
 #include <limits>
+#include <exception>
 
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -148,22 +149,24 @@ bool send_all(int socket_fd, const std::string& data){ //This method helps my se
     return true;
 }
 
-std::string receive_line(int socket_fd){
-    std::string response;
+bool receive_line(int socket_fd, std::string& response){
+    response.clear();
     char character;
 
     while(true){
         ssize_t bytes_received = recv(socket_fd, &character, 1, 0);
-        
+
         if(bytes_received > 0){
             if(character == '\n'){
-                return response;
+                return true;
             }
+
             response += character;
         }
+
         if(bytes_received == 0){
             std::cerr << "Server closed the connection." << std::endl;
-            return "";
+            return false;
         }
 
         if(bytes_received == -1){
@@ -172,7 +175,7 @@ std::string receive_line(int socket_fd){
             }
 
             perror("Receiving failed");
-            return "";
+            return false;
         }
     }
 }
@@ -219,7 +222,12 @@ void send_message(int socket_fd){
 
     std::cout << "Message request sent to server." << std::endl;
 
-    std::string response = receive_line(socket_fd);
+    std::string response;
+
+    if(!receive_line(socket_fd, response)){
+        std::cerr << "Failed to receive server response." << std::endl;
+        return;
+    }
 
     if(response == "OK"){
         std::cout << "Message successfully sent!" << std::endl;
@@ -242,8 +250,57 @@ void quit_connection(int socket_fd){
 }
 
 
+void list_messages(int socket_fd){
+    std::string username;
 
+    std::cout << "Username: ";
+    std::getline(std::cin, username);
+    
+    std::string request = "LIST\n" + username + "\n";
 
+     if(!send_all(socket_fd, request)){
+        std::cerr << "Failed to send LIST request." << std::endl;
+        return;
+    }
 
+    std::string response;
 
+    if(!receive_line(socket_fd, response)){
+        std::cerr << "Failed to receive message count." << std::endl;
+        return;
+    }
 
+    if(response == "ERR"){
+        std::cerr << "Message could not be read." << std::endl;
+        return;
+    }
+
+    int message_count;
+
+    try{    //assert that we really have a number in our string that willl be converted with stoi
+        size_t pos = 0;
+        message_count = std::stoi(response, &pos);
+
+        if(pos != response.size() || message_count < 0){
+            std::cerr << "Invalid message count." << std::endl;
+            return;
+        }
+    }
+    catch(const std::exception& e){
+        std::cerr << "Invalid server response: " << e.what() << std::endl;
+        return;
+    }
+
+    std::cout << "You have " << message_count << " messages:" << std::endl;
+
+    for(int i = 0; i < message_count; i++){
+        std::string subject;
+
+        if(!receive_line(socket_fd, subject)){
+            std::cerr << "Failed to receive message subject." << std::endl;
+            return;
+        }
+
+        std::cout << i + 1 << ". " << subject << std::endl;
+    }
+}
