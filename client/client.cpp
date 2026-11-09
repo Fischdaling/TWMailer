@@ -27,6 +27,8 @@ int main(int argc, char *argv[]){
     if(socket_fd == -1) return 1;
     std::cout << "Connected to server!" << std::endl;
 
+    send_message(socket_fd);
+
     close(socket_fd);
 
 }
@@ -136,7 +138,10 @@ void send_message(int socket_fd){
     std::cout << "Message request sent to server." << std::endl;
 }
 
-
+std::string receive_line(int socket_fd){
+    std::string response;
+    char character;
+}
 
 
 
