@@ -138,11 +138,12 @@ void send_message(int socket_fd){
     std::cout << "Message request sent to server." << std::endl;
 }
 
+/*
 std::string receive_line(int socket_fd){
     std::string response;
     char character;
 }
-
+*/
 
 
 
